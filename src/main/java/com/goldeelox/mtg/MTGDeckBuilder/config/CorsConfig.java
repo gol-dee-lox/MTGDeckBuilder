@@ -11,8 +11,9 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(
                         "http://localhost",
+                        "https://localhost",
                         "capacitor://localhost",
-                        "https://your-prod-url.com") // update this for production
+                        "https://mtg.goldeelox.com") // update this for production
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
