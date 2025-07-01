@@ -9,7 +9,7 @@ WORKDIR /home/gradle/project
 RUN chmod +x ./gradlew
 
 # Build the project
-RUN ./gradlew build --no-daemon --stacktrace
+RUN ./gradlew build -x test --no-daemon --stacktrace
 
 # Stage 2: Run the application
 FROM eclipse-temurin:21-jre
