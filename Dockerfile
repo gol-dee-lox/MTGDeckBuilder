@@ -1,9 +1,14 @@
 # Stage 1: Build the application
 FROM gradle:8.4.0-jdk21 AS build
-# Fix: Make gradlew executable
-RUN chmod +x ./gradlew
+
+# Copy project files into image
 COPY --chown=gradle:gradle . /home/gradle/project
 WORKDIR /home/gradle/project
+
+# Make gradlew executable (AFTER it's been copied in)
+RUN chmod +x ./gradlew
+
+# Build the project
 RUN ./gradlew build --no-daemon --stacktrace
 
 # Stage 2: Run the application
