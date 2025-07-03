@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.goldeelox.mtg.MTGDeckBuilder.model.Card;
 import com.goldeelox.mtg.MTGDeckBuilder.repository.CardRepository;
 
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/cards")
 public class CardController {
