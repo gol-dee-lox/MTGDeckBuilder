@@ -6,17 +6,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins(
-                        "http://localhost",
-                        "https://localhost",
-                        "capacitor://localhost",
-                        "https://mtg.goldeelox.com",
-                        "https://mtgdeckbuilder-ewid.onrender.com") // update this for production
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true);
-    }
+	@Override
+	public void addCorsMappings(CorsRegistry registry) {
+	  registry.addMapping("/**")
+	    .allowedOriginPatterns(
+	      "https://mtg.goldeelox.com",
+	      "https://exquisite-cupcake-4a3ed2.netlify.app"
+	    )
+	    .allowedMethods("GET", "POST", "OPTIONS", "PUT", "DELETE")
+	    .allowedHeaders("*")
+	    .allowCredentials(true);
+	}
 }
