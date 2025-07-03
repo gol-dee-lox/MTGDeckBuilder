@@ -13,7 +13,8 @@ public class CorsConfig implements WebMvcConfigurer {
                         "http://localhost",
                         "https://localhost",
                         "capacitor://localhost",
-                        "https://mtg.goldeelox.com") // update this for production
+                        "https://mtg.goldeelox.com",
+                        "https://mtgdeckbuilder-ewid.onrender.com") // update this for production
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
