@@ -26,7 +26,7 @@ public class RedisConfig {
     public LettuceConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration standaloneConfig = new RedisStandaloneConfiguration(host, port);
         standaloneConfig.setUsername(username);
-        standaloneConfig.setPassword(password);
+        standaloneConfig.setPassword(RedisPassword.of(password));
 
         LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
             .useSsl()  // ⚠️ Enables SSL/TLS
