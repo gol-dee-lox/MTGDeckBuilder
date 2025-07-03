@@ -18,6 +18,6 @@ export class CardService {
   constructor(private http: HttpClient) {}
 
   getAllCards(): Observable<Card[]> {
-    return this.http.get<Card[]>(`${this.backendUrl}/cards`);
+    return this.http.get<Card[]>(`${this.backendUrl}/cards`, { withCredentials: true });
   }
 }

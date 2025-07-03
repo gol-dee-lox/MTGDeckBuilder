@@ -14,7 +14,7 @@ public class CorsConfig implements WebMvcConfigurer {
 	      "https://exquisite-cupcake-4a3ed2.netlify.app"
 	    )
 	    .allowedMethods("GET", "POST", "OPTIONS", "PUT", "DELETE")
-	    .allowedHeaders("*")
+	    .allowedHeaders("Origin", "Content-Type", "Accept", "Authorization")
 	    .allowCredentials(true);
 	}
 }
