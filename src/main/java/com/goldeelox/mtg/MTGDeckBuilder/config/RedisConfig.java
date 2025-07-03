@@ -15,6 +15,9 @@ public class RedisConfig {
 
     @Value("${spring.redis.port}")
     private int port;
+    
+    @Value("${spring.redis.username}")
+    private String username;
 
     @Value("${spring.redis.password}")
     private String password;
@@ -22,7 +25,8 @@ public class RedisConfig {
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration standaloneConfig = new RedisStandaloneConfiguration(host, port);
-        standaloneConfig.setPassword(RedisPassword.of(password));
+        standaloneConfig.setUsername(username);
+        standaloneConfig.setPassword(password);
 
         LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
             .useSsl()  // ⚠️ Enables SSL/TLS
