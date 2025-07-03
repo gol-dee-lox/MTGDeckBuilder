@@ -13,7 +13,7 @@ import java.util.*;
 @Component
 public class RedisCardLoader {
 
-    private static final int CHUNK_SIZE = 200; // adjust as needed for 10MB safety
+    private static final int CHUNK_SIZE = 100; // adjust as needed for 10MB safety
 
     @Autowired
     private StringRedisTemplate redisTemplate;
