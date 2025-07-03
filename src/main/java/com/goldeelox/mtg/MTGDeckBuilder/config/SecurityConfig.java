@@ -18,9 +18,11 @@ public class SecurityConfig {
     private FirebaseTokenFilter firebaseTokenFilter;
 
     @SuppressWarnings("removal")
-	@Bean
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors()  // ← ADD THIS LINE
+            .and()
             .csrf().disable()
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
@@ -29,6 +31,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .addFilterBefore(firebaseTokenFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 }
