@@ -1,6 +1,7 @@
 package com.goldeelox.mtg.MTGDeckBuilder.repository;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goldeelox.mtg.MTGDeckBuilder.model.Card;
 import jakarta.annotation.PostConstruct;
@@ -12,13 +13,13 @@ import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class RedisCardLoader {
 
-    private static final int CHUNK_SIZE = 2000;
-    
     @Autowired
     @Qualifier("directLettuceFactory")
     private RedisConnectionFactory redisConnectionFactory;
@@ -31,59 +32,100 @@ public class RedisCardLoader {
 
     @PostConstruct
     public void loadCardsIntoMemory() {
-        try {
-            System.out.println("✅ Starting Redis SCAN using secure connection...");
-            ScanOptions options = ScanOptions.scanOptions().match("*").count(CHUNK_SIZE).build();
+        System.out.println("✅ Starting Redis SCAN using secure connection...");
+        ScanOptions options = ScanOptions.scanOptions()
+                                        .match("*")
+                                        .count(2000)
+                                        .build();
 
-            @SuppressWarnings("deprecation")
-			Cursor<byte[]> cursor = redisConnectionFactory.getConnection().scan(options);
+        @SuppressWarnings("deprecation")
+        Cursor<byte[]> cursor = redisConnectionFactory
+                                    .getConnection()
+                                    .scan(options);
 
-            List<String> allKeys = new ArrayList<>();
-            while (cursor.hasNext()) {
-                String key = new String(cursor.next());
-                allKeys.add(key);
+        List<String> allKeys = new ArrayList<>();
+        while (cursor.hasNext()) {
+            allKeys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+        }
+
+        if (allKeys.isEmpty()) {
+            System.out.println("⚠️ No keys found in Redis via SCAN.");
+            return;
+        }
+
+        System.out.println("✅ Total keys found: " + allKeys.size());
+
+        List<Card> loadedCards = new ArrayList<>();
+
+        // Case-insensitive binding: lowercase redis fields → camelCase Java props
+        @SuppressWarnings("deprecation")
+		ObjectMapper mapper = new ObjectMapper()
+        	    .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+        	    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        // Fields that need comma-splitting (after stripping JSON array syntax)
+        Set<String> commaSplitFields = Set.of(
+            "colors", "coloridentity",
+            "types", "subtypes", "supertypes"
+        );
+        // Field that needs tilde-splitting
+        String keywordField = "keywords";
+
+        for (String key : allKeys) {
+            Map<Object, Object> raw = redisTemplate.opsForHash().entries(key);
+            if (raw == null || raw.isEmpty()) {
+                System.out.println("⚠️ No hash entries for key: " + key);
+                continue;
             }
 
-            if (allKeys.isEmpty()) {
-                System.out.println("⚠️ No keys found in Redis via SCAN.");
-                return;
-            }
+            // Cast to Map<String,String> since we store only strings
+            @SuppressWarnings("unchecked")
+            Map<String,String> stringHash = (Map<String,String>)(Map<?,?>) raw;
 
-            System.out.println("✅ Total keys found: " + allKeys.size());
+            // Build normalized map: fieldName -> String or List<String>
+            Map<String,Object> normalized = new LinkedHashMap<>();
+            for (Map.Entry<String,String> entry : stringHash.entrySet()) {
+                String field = entry.getKey().toLowerCase(Locale.ROOT);
+                String val   = entry.getValue();
 
-            List<Card> loadedCards = new ArrayList<>();
-            ObjectMapper mapper = new ObjectMapper();
+                if (val == null || val.isBlank()) {
+                    // skip null/blank entirely or replace with empty
+                    continue;
+                }
 
-            for (int i = 0; i < allKeys.size(); i += CHUNK_SIZE) {
-                int end = Math.min(i + CHUNK_SIZE, allKeys.size());
-                List<String> chunk = allKeys.subList(i, end);
+                if (keywordField.equals(field)) {
+                    // split on tilde
+                    List<String> parts = Arrays.stream(val.split("~", -1))
+                                               .map(String::trim)
+                                               .filter(s -> !s.isEmpty())
+                                               .collect(Collectors.toList());
+                    normalized.put(field, parts);
 
-                List<String> jsonResults = redisTemplate.opsForValue().multiGet(chunk);
+                } else if (commaSplitFields.contains(field)) {
+                    // strip JSON array syntax then split on comma
+                    String clean = val.replaceAll("[\\[\\]\"]", "");
+                    List<String> parts = Arrays.stream(clean.split(",", -1))
+                                               .map(String::trim)
+                                               .filter(s -> !s.isEmpty())
+                                               .collect(Collectors.toList());
+                    normalized.put(field, parts);
 
-                if (jsonResults != null) {
-                    for (int j = 0; j < chunk.size(); j++) {
-                        String key = chunk.get(j);
-                        String json = jsonResults.get(j);
-                        if (json != null && !json.isBlank()) {
-                            try {
-                                Card card = mapper.readValue(json, Card.class);
-                                loadedCards.add(card);
-                            } catch (JsonProcessingException e) {
-                                System.err.println("❌ Failed to parse JSON for key: " + key);
-                                System.err.println("❌ Error: " + e.getMessage());
-                            }
-                        } else {
-                            System.out.println("⚠️ Empty or null value for key: " + key);
-                        }
-                    }
+                } else {
+                    // single string field
+                    normalized.put(field, val.trim());
                 }
             }
 
-            cardRepository.setCards(loadedCards);
-            System.out.println("✅ Loaded " + loadedCards.size() + " cards from Redis into memory.");
-        } catch (Exception e) {
-            System.err.println("❗ RedisCardLoader failed: " + e.getMessage());
-            e.printStackTrace();
+            try {
+                Card card = mapper.convertValue(normalized, Card.class);
+                loadedCards.add(card);
+            } catch (IllegalArgumentException ex) {
+                System.err.println("❌ Failed to map hash to Card for key: " + key);
+                System.err.println("❌ Error: " + ex.getMessage());
+            }
         }
+
+        cardRepository.setCards(loadedCards);
+        System.out.println("✅ Loaded " + loadedCards.size() + " cards from Redis into memory.");
     }
 }

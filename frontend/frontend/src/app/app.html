@@ -1,12 +1,72 @@
-<main *ngIf="card; else loadingOrError">
-  <h1>{{ card.name }}</h1>
-  <p><strong>Power/Toughness:</strong> {{ card.power }}/{{ card.toughness }}</p>
-  <p><strong>Colors:</strong> {{ card.colors?.join(', ') || 'Colorless' }}</p>
-  <p><strong>Text:</strong></p>
-  <pre>{{ card.text }}</pre>
+<main *ngIf="card as c; else loadingOrError" class="card-container">
+  <!-- CARD HEADER: name, mana cost, set code -->
+  <header class="card-header">
+    <h1 class="card-name">{{ c.name }}</h1>
+    <div class="card-mana-set">
+      <span class="mana-cost">{{ c.mCost }}</span>
+      <span class="set-code">{{ c.setCode }}</span>
+    </div>
+  </header>
+
+  <!-- CARD TYPES & RARITY -->
+  <section class="card-meta">
+    <p><strong>Type Line:</strong>
+      {{ c.types.join(' ') }}
+      <span *ngIf="c.subtypes.length">— {{ c.subtypes.join(' ') }}</span>
+    </p>
+    <p *ngIf="c.supertypes.length">
+      <strong>Supertypes:</strong> {{ c.supertypes.join(', ') }}
+    </p>
+    <p *ngIf="c.rare"><strong>Rarity:</strong> {{ c.rare }}</p>
+    <p *ngIf="c.mVal"><strong>Mana Value:</strong> {{ c.mVal }}</p>
+  </section>
+
+  <!-- COLORS & KEYWORDS -->
+  <section class="card-colors-keywords">
+    <p>
+      <strong>Colors:</strong>
+      {{ c.colors.length ? c.colors.join(', ') : 'Colorless' }}
+    </p>
+    <p *ngIf="c.colorIdentity.length">
+      <strong>Color Identity:</strong> {{ c.colorIdentity.join(', ') }}
+    </p>
+    <p *ngIf="c.keywords.length">
+      <strong>Keywords:</strong>
+      <span *ngFor="let kw of c.keywords; let last = last">
+        {{ kw }}<span *ngIf="!last">, </span>
+      </span>
+    </p>
+  </section>
+
+  <!-- POWER / TOUGHNESS -->
+  <section *ngIf="c.power || c.toughness" class="card-stats">
+    <p><strong>Power / Toughness:</strong> {{ c.power }}/{{ c.toughness }}</p>
+  </section>
+
+  <!-- RULE TEXT -->
+  <section class="card-text">
+    <p><strong>Rules Text:</strong></p>
+    <pre>{{ c.text }}</pre>
+  </section>
+
+  <!-- FORMAT LEGALITIES -->
+  <section *ngIf="formats.length" class="card-legalities">
+    <h2>Format Legalities</h2>
+    <ul>
+      <li *ngFor="let fmt of formats">
+        <span [ngClass]="{
+            legal:       c[fmt] === 'LEGAL',
+            banned:      c[fmt] === 'BANNED',
+            restricted:  c[fmt] === 'RESTRICTED'
+          }">
+          {{ fmt | titlecase }}: {{ c[fmt] || '—' }}
+        </span>
+      </li>
+    </ul>
+  </section>
 </main>
 
 <ng-template #loadingOrError>
-  <p *ngIf="error">{{ error }}</p>
-  <p *ngIf="!error">Loading...</p>
+  <p *ngIf="error" class="error">{{ error }}</p>
+  <p *ngIf="!error" class="loading">Loading...</p>
 </ng-template>
